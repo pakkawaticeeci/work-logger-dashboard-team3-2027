@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Logger • Team 3</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --border-color: #e2e8f0;
+            --theme-color: #0d9488;
+            --theme-soft: rgba(13, 148, 136, 0.12);
+            --theme-border: rgba(13, 148, 136, 0.35);
+        }
+        body {
+            font-family: 'Kanit', sans-serif;
+            background-color: var(--bg-main);
+            color: #1e293b;
+        }
+        .custom-workspace-bg {
+            background-color: var(--bg-main) !important;
+        }
+        .theme-text { color: var(--theme-color) !important; }
+        .theme-bg { background-color: var(--theme-color) !important; color: #ffffff !important; }
+        .theme-bg-soft { background-color: var(--theme-soft) !important; color: var(--theme-color) !important; }
+        .theme-border { border-color: var(--theme-border) !important; }
+
+        .fade-in { animation: fadeIn 0.25s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Sticky Table Columns */
+        .sticky-col-1 { position: sticky; left: 0; z-index: 45; background-color: #ffffff; background-clip: padding-box; }
+        .sticky-col-2 { position: sticky; left: 112px; z-index: 45; background-color: #ffffff; background-clip: padding-box; }
+        .sticky-col-3 {
+            position: sticky; left: 208px; z-index: 45; background-color: #f8fafc;
+            border-right: 1px solid var(--border-color) !important;
+            background-clip: padding-box;
+            box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.04);
+        }
+        .sticky-header { position: sticky; top: 0; z-index: 40; background-clip: padding-box; }
+        .sticky-corner { position: sticky; top: 0; left: 0; z-index: 60; background-clip: padding-box; }
+        .sticky-corner-2 { position: sticky; top: 0; left: 112px; z-index: 60; background-clip: padding-box; }
+        .sticky-corner-3 {
+            position: sticky; top: 0; left: 208px; z-index: 60;
+            border-right: 1px solid var(--border-color) !important;
+            background-clip: padding-box;
+            box-shadow: 4px 0 8px -2px rgba(0, 0, 0, 0.04);
+        }
+
+        #matrix-container table {
+            border-collapse: separate !important;
+            border-spacing: 0 !important;
+            border-top: 1px solid var(--border-color);
+            border-left: 1px solid var(--border-color);
+        }
+        #matrix-container th,
+        #matrix-container td {
+            border-top: none !important;
+            border-left: none !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            border-right: 1px solid #e2e8f0 !important;
+            background-clip: padding-box !important;
+        }
+        #matrix-container tr.user-divider > td,
+        #matrix-container td[rowspan] {
+            border-bottom: 2px solid #94a3b8 !important;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased custom-workspace-bg transition-colors duration-200">
+
+    <!-- Toast Notification -->
+    <div id="notification-area" class="fixed top-4 right-4 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- ================= PROFILE SELECTION PAGE ================= -->
+    <div id="profile-page" class="flex flex-col items-center justify-center min-h-screen p-6 fade-in custom-workspace-bg">
+        <div class="mb-12 text-center">
+            <span class="inline-block px-3.5 py-1 rounded-full text-xs font-semibold tracking-wider uppercase theme-bg-soft border theme-border mb-4 shadow-sm">
+                Team 3 Workspace
+            </span>
+            <h1 class="text-4xl md:text-5xl font-bold text-slate-900 tracking-tight mb-2">
+                Work <span class="theme-text">Logger</span>
+            </h1>
+            <p class="text-slate-500 text-sm">เลือกโปรไฟล์ผู้ใช้งานเพื่อเข้าสู่ระบบ (วันหยุด: ศุกร์ - เสาร์)</p>
+        </div>
+
+        <div id="profile-grid" class="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8 max-w-4xl w-full justify-items-center mx-auto"></div>
+
+        <button onclick="openProfileModal()" class="mt-12 text-xs text-slate-600 hover:opacity-80 transition-all border border-slate-200 rounded-full px-5 py-2.5 bg-white shadow-sm flex items-center gap-2">
+            <i class="fas fa-sliders-h theme-text"></i> ตั้งค่ารูปโปรไฟล์
+        </button>
+    </div>
+
+    <!-- ================= MAIN DASHBOARD ================= -->
+    <div id="dashboard-page" class="hidden min-h-screen flex flex-col md:flex-row">
+
+        <!-- Left Sidebar -->
+        <aside class="w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col shrink-0 z-[70] shadow-sm">
+            <!-- Brand & User Info -->
+            <div class="p-4 md:p-5 border-b border-slate-100 flex items-center justify-between md:block">
+                <div class="flex items-center gap-3">
+                    <div class="relative">
+                        <img id="nav-avatar" class="h-11 w-11 rounded-2xl border-2 theme-border object-cover shadow-sm" src="" alt="Avatar">
+                        <span class="absolute -bottom-1 -right-1 flex h-3 w-3">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white"></span>
+                        </span>
+                    </div>
+                    <div>
+                        <div id="nav-username" class="text-sm font-bold text-slate-800 leading-tight">Username</div>
+                        <div class="text-[11px] theme-text font-medium mt-0.5">Team 3 • Online</div>
+                    </div>
+                </div>
+                <!-- Mobile Quick Actions -->
+                <div class="flex md:hidden items-center gap-2">
+                    <button onclick="refreshData()" class="p-2 rounded-xl theme-bg-soft border theme-border"><i class="fas fa-sync-alt"></i></button>
+                    <button onclick="logout()" class="p-2 rounded-xl bg-slate-50 text-rose-500 border border-slate-200"><i class="fas fa-sign-out-alt"></i></button>
+                </div>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="flex md:flex-col overflow-x-auto md:overflow-visible p-2 md:p-3 gap-1.5 flex-1" aria-label="Sidebar">
+                <button onclick="switchTab('form')" id="tab-form" class="tab-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all theme-bg-soft border theme-border shadow-xs">
+                    <i class="fas fa-pen-to-square w-4 text-center"></i> <span>บันทึกงาน</span>
+                </button>
+                <button onclick="switchTab('history')" id="tab-history" class="tab-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+                    <i class="fas fa-clock-rotate-left w-4 text-center"></i> <span>ประวัติส่วนตัว</span>
+                </button>
+                <button onclick="switchTab('matrix')" id="tab-matrix" class="tab-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+                    <i class="fas fa-table-cells w-4 text-center"></i> <span>ตารางทีม 3</span>
+                </button>
+                <button onclick="switchTab('report')" id="tab-report" class="tab-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent">
+                    <i class="fas fa-file-lines w-4 text-center"></i> <span>สร้างรายงาน</span>
+                </button>
+            </nav>
+
+            <!-- Custom Color Picker Box -->
+            <div class="mx-3 mb-3 p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5">
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-slate-600"><i class="fas fa-palette theme-text mr-1"></i> ปรับสีตามใจชอบ</span>
+                    <button onclick="resetCustomColors()" class="text-[10px] text-slate-400 hover:text-rose-500 underline" title="กลับเป็นค่าเริ่มต้น">รีเซ็ต</button>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <label class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 cursor-pointer hover:border-slate-300" title="เลือกสีพื้นหลัง">
+                        <span class="text-[11px] text-slate-600">พื้นหลัง</span>
+                        <input type="color" id="bg-color-picker" value="#f8fafc" oninput="updateCustomBg(this.value)" class="w-5 h-5 p-0 border-0 rounded cursor-pointer bg-transparent">
+                    </label>
+                    <label class="flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-slate-200 cursor-pointer hover:border-slate-300" title="เลือกสีปุ่มและแถบเมนู">
+                        <span class="text-[11px] text-slate-600">สีธีมหลัก</span>
+                        <input type="color" id="theme-color-picker" value="#0d9488" oninput="updateCustomTheme(this.value)" class="w-5 h-5 p-0 border-0 rounded cursor-pointer bg-transparent">
+                    </label>
+                </div>
+            </div>
+
+            <!-- Desktop Bottom Actions -->
+            <div class="hidden md:flex flex-col gap-2 p-4 border-t border-slate-100 bg-slate-50/50">
+                <button onclick="refreshData()" id="btn-refresh" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-semibold theme-bg-soft border theme-border hover:opacity-85 transition-all">
+                    <i class="fas fa-sync-alt" id="refresh-icon"></i> รีเฟรชข้อมูลล่าสุด
+                </button>
+                <button onclick="logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium bg-white hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200 hover:border-rose-200 transition-all">
+                    <i class="fas fa-sign-out-alt"></i> สลับผู้ใช้งาน
+                </button>
+            </div>
+        </aside>
+
+        <!-- Main Workspace Content -->
+        <main class="flex-1 flex flex-col min-w-0 custom-workspace-bg p-4 sm:p-6 lg:p-8 overflow-y-auto transition-colors duration-200">
+
+            <!-- KPI Summary Strip -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 max-w-7xl w-full mx-auto">
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">ยอดงานของคุณ (เดือนนี้)</p>
+                        <p id="kpi-my-total" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-2xl theme-bg-soft border theme-border flex items-center justify-center text-lg">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                </div>
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">วันมาทำงานของคุณ (เดือนนี้)</p>
+                        <p id="kpi-my-days" class="text-2xl font-bold text-emerald-600 mt-1">0 วัน</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-lg">
+                        <i class="fas fa-calendar-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white border border-slate-200/80 rounded-2xl p-4 flex items-center justify-between shadow-sm">
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">ยอดรวมทั้งทีม 3 (เดือนนี้)</p>
+                        <p id="kpi-team-total" class="text-2xl font-bold text-indigo-600 mt-1">0</p>
+                    </div>
+                    <div class="w-11 h-11 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-600 text-lg">
+                        <i class="fas fa-users"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 1: FORM ================= -->
+            <div id="section-form" class="tab-content fade-in max-w-4xl w-full mx-auto">
+                <form id="work-form" onsubmit="handleFormSubmit(event)" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/60 flex flex-col sm:flex-row gap-4 justify-between items-center">
+                        <input type="hidden" id="edit-id" value="">
+                        <div class="w-full">
+                            <label class="block text-xs font-medium text-slate-500 mb-1.5">วันที่ปฏิบัติงาน</label>
+                            <input type="date" id="work-date" class="w-full bg-white text-slate-800 px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-300 outline-none text-sm" required>
+                        </div>
+                        <div class="w-full">
+                            <label class="block text-xs font-medium text-slate-500 mb-1.5">สถานะการทำงาน</label>
+                            <select id="work-status" class="w-full bg-white text-slate-800 px-3.5 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-slate-300 outline-none text-sm font-medium" onchange="toggleWorkInputs()">
+                                <option value="work">✅ มาทำงาน</option>
+                                <option value="vacation">🏖️ ลาพักร้อน</option>
+                                <option value="sick">🤒 ลาป่วย</option>
+                                <option value="personal">📝 ลากิจ</option>
+                                <option value="off">🏠 วันหยุด</option>
+                                <option value="swap">🔄 สลับกะ</option>
+                            </select>
+                        </div>
+                        <div class="w-full sm:w-auto sm:min-w-[145px] theme-bg-soft border theme-border rounded-xl px-4 py-2 text-center">
+                            <span class="block text-[10px] font-semibold uppercase tracking-wider opacity-80">ยอดรวมครั้งนี้</span>
+                            <span id="live-form-total" class="text-xl font-bold">0</span>
+                        </div>
+                    </div>
+
+                    <div id="work-metrics-section" class="p-5 sm:p-6 space-y-6">
+                        <!-- Main 3 Tasks -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200 hover:border-rose-300 transition-colors">
+                                <label class="flex justify-between items-center cursor-pointer mb-3">
+                                    <span class="font-semibold text-rose-600 text-sm">MLPR</span>
+                                    <input type="checkbox" id="check-mlpr" class="w-4 h-4 accent-rose-500 rounded cursor-pointer" onchange="toggleInput('mlpr')">
+                                </label>
+                                <input type="number" id="val-mlpr" oninput="updateLiveTotal()" class="hidden w-full bg-white border border-slate-200 rounded-lg p-2.5 text-center text-slate-800 focus:border-rose-500 outline-none text-sm" placeholder="ระบุจำนวน">
+                            </div>
+                            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200 hover:border-blue-300 transition-colors">
+                                <label class="flex justify-between items-center cursor-pointer mb-3">
+                                    <span class="font-semibold text-blue-600 text-sm">MNPR</span>
+                                    <input type="checkbox" id="check-mnpr" class="w-4 h-4 accent-blue-500 rounded cursor-pointer" onchange="toggleInput('mnpr')">
+                                </label>
+                                <input type="number" id="val-mnpr" oninput="updateLiveTotal()" class="hidden w-full bg-white border border-slate-200 rounded-lg p-2.5 text-center text-slate-800 focus:border-blue-500 outline-none text-sm" placeholder="ระบุจำนวน">
+                            </div>
+                            <div class="bg-slate-50/70 p-4 rounded-xl border border-slate-200 hover:border-emerald-300 transition-colors">
+                                <label class="flex justify-between items-center cursor-pointer mb-3">
+                                    <span class="font-semibold text-emerald-600 text-sm">Re-Confirm</span>
+                                    <input type="checkbox" id="check-reconfirmed" class="w-4 h-4 accent-emerald-500 rounded cursor-pointer" onchange="toggleInput('reconfirmed')">
+                                </label>
+                                <input type="number" id="val-reconfirmed" oninput="updateLiveTotal()" class="hidden w-full bg-white border border-slate-200 rounded-lg p-2.5 text-center text-slate-800 focus:border-emerald-500 outline-none text-sm" placeholder="ระบุจำนวน">
+                            </div>
+                        </div>
+
+                        <!-- Sub 5 Tasks -->
+                        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 border-t border-slate-100 pt-6">
+                            <div>
+                                <label class="block text-xs text-orange-600 text-center mb-1.5 font-semibold">LOG</label>
+                                <input type="number" id="val-log" oninput="updateLiveTotal()" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-center text-slate-800 focus:border-orange-500 outline-none text-sm" placeholder="-">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-indigo-600 text-center mb-1.5 font-semibold">TXN</label>
+                                <input type="number" id="val-txn" oninput="updateLiveTotal()" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-center text-slate-800 focus:border-indigo-500 outline-none text-sm" placeholder="-">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-teal-600 text-center mb-1.5 font-semibold">CCTV (AUDIT)</label>
+                                <input type="number" id="val-cctv" oninput="updateLiveTotal()" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-center text-slate-800 focus:border-teal-500 outline-none text-sm" placeholder="-">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-pink-600 text-center mb-1.5 font-semibold">น้องถาม</label>
+                                <input type="number" id="val-temp" oninput="updateLiveTotal()" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-center text-slate-800 focus:border-pink-500 outline-none text-sm" placeholder="-">
+                            </div>
+                            <div>
+                                <label class="block text-xs text-amber-600 text-center mb-1.5 font-semibold">รถในขบวนเสด็จ</label>
+                                <input type="number" id="val-royal" oninput="updateLiveTotal()" class="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-center text-slate-800 focus:border-amber-500 outline-none text-sm" placeholder="-">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 border-t border-slate-100 bg-slate-50/70 flex gap-3">
+                        <button type="button" onclick="resetForm()" class="px-5 py-2.5 border border-slate-200 bg-white rounded-xl text-slate-600 hover:bg-slate-100 transition-colors text-sm font-medium">ล้างค่า</button>
+                        <button type="submit" id="btn-submit" class="flex-1 theme-bg hover:opacity-90 font-semibold py-2.5 px-4 rounded-xl shadow-sm transition-all text-sm">บันทึกข้อมูล</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- ================= TAB 2: MY HISTORY ================= -->
+            <div id="section-history" class="tab-content hidden fade-in space-y-4 max-w-7xl w-full mx-auto">
+                <div class="flex justify-between items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <h2 class="text-base font-bold text-slate-800 flex items-center gap-2"><i class="fas fa-clock-rotate-left theme-text"></i> ประวัติการทำงานส่วนตัว</h2>
+                    <input type="month" id="history-month" class="bg-white text-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 outline-none text-sm" onchange="renderMyHistory()">
+                </div>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left text-slate-700 border-separate border-spacing-0">
+                            <thead class="text-xs text-slate-500 bg-slate-50 sticky top-0 z-10">
+                                <tr>
+                                    <th class="px-4 py-3 text-center border-b border-slate-200">วันที่</th>
+                                    <th class="px-2 py-3 text-center text-rose-600 border-b border-slate-200">ML</th>
+                                    <th class="px-2 py-3 text-center text-blue-600 border-b border-slate-200">MN</th>
+                                    <th class="px-2 py-3 text-center text-emerald-600 border-b border-slate-200">Re</th>
+                                    <th class="px-2 py-3 text-center text-orange-600 border-b border-slate-200">Log</th>
+                                    <th class="px-2 py-3 text-center text-indigo-600 border-b border-slate-200">TXN</th>
+                                    <th class="px-2 py-3 text-center text-teal-600 border-b border-slate-200">CCTV</th>
+                                    <th class="px-2 py-3 text-center text-pink-600 border-b border-slate-200">ถาม</th>
+                                    <th class="px-2 py-3 text-center text-amber-600 border-b border-slate-200">รถเสด็จ</th>
+                                    <th class="px-3 py-3 text-center font-bold text-slate-900 border-b border-slate-200">รวม</th>
+                                    <th class="px-4 py-3 text-right border-b border-slate-200">จัดการ</th>
+                                </tr>
+                            </thead>
+                            <tbody id="history-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 3: TEAM MATRIX ================= -->
+            <div id="section-matrix" class="tab-content hidden fade-in space-y-4 max-w-7xl w-full mx-auto">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white p-4 rounded-2xl border border-slate-200 shadow-sm gap-4">
+                    <div>
+                        <h2 class="text-base font-bold flex items-center gap-2 text-slate-800"><i class="fas fa-table-cells theme-text"></i> ตารางการทำงานทีม 3</h2>
+                        <p class="text-xs text-slate-500 mt-1">* คลิกวันที่บนหัวตารางเพื่อดูสรุปรายวัน (วันหยุดประจำสัปดาห์: ศุกร์ - เสาร์)</p>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <input type="month" id="team-month" class="bg-white text-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 outline-none text-sm" onchange="renderMatrixTable()">
+                        <button onclick="openMatrixInNewTab()" class="text-xs bg-slate-50 hover:bg-slate-100 text-slate-700 px-3.5 py-2 rounded-xl border border-slate-200 transition flex items-center gap-2 font-medium">
+                            <i class="fas fa-up-right-from-square"></i> ดูจอใหญ่
+                        </button>
+                    </div>
+                </div>
+                <div class="bg-white border border-slate-200 shadow-sm rounded-2xl overflow-hidden flex flex-col h-[620px]">
+                    <div class="overflow-auto flex-1 relative" id="matrix-container">
+                        <table class="w-max text-left min-w-full">
+                            <thead id="matrix-header" class="bg-slate-50 text-slate-600 text-xs"></thead>
+                            <tbody id="matrix-body" class="text-slate-700 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ================= TAB 4: REPORT ================= -->
+            <div id="section-report" class="tab-content hidden fade-in space-y-4 max-w-5xl w-full mx-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-5">
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold mb-4 theme-text text-sm">1. เลือกวันที่และกะ</h3>
+                            <div class="flex gap-3">
+                                <div class="flex-1">
+                                    <label class="block text-xs text-slate-500 mb-1">วันที่</label>
+                                    <input type="date" id="summary-date" class="w-full bg-white text-slate-800 border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm" onchange="renderSummaryUserList()">
+                                </div>
+                                <div class="w-1/3">
+                                    <label class="block text-xs text-slate-500 mb-1">กะ</label>
+                                    <select id="summary-shift" class="w-full bg-white text-slate-800 border border-slate-200 rounded-xl px-3 py-2 outline-none text-sm">
+                                        <option value="เช้า (A)">เช้า (A)</option>
+                                        <option value="บ่าย (B)">บ่าย (B)</option>
+                                        <option value="ดึก (C)">ดึก (C)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                            <h3 class="font-bold mb-4 theme-text text-sm">2. เช็คชื่อพนักงาน</h3>
+                            <div id="summary-user-list" class="space-y-2"></div>
+                        </div>
+
+                        <button onclick="generateSummaryText()" class="w-full bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white py-3 rounded-xl font-semibold transition flex items-center justify-center gap-2 shadow-sm text-sm">
+                            <i class="fas fa-wand-magic-sparkles"></i> สร้างข้อความรายงาน
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-indigo-700 text-sm">ผลลัพธ์ (Preview)</h3>
+                            <button onclick="copySummary()" class="text-xs theme-bg hover:opacity-90 px-3.5 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                                <i class="fas fa-copy"></i> คัดลอก
+                            </button>
+                        </div>
+                        <textarea id="summary-text" class="w-full flex-1 min-h-[320px] bg-slate-50 border border-slate-200 rounded-xl p-4 text-slate-800 font-mono text-sm resize-none focus:outline-none" placeholder="คลิกปุ่ม 'สร้างข้อความรายงาน' ด้านซ้าย..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Daily Summary Modal -->
+    <div id="daily-summary-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[100] flex items-center justify-center fade-in px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 id="modal-date-title" class="font-bold text-slate-800 text-base flex items-center gap-2"><i class="fas fa-calendar-day theme-text"></i> สรุปงานวันที่...</h3>
+                <button onclick="closeDailySummary()" class="text-slate-400 hover:text-rose-500 transition-colors bg-white hover:bg-rose-50 rounded-full w-8 h-8 flex items-center justify-center border border-slate-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div id="modal-content" class="p-4 overflow-y-auto flex-1 space-y-3 bg-white"></div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                <button onclick="closeDailySummary()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl hover:bg-slate-300 transition-colors font-medium text-xs">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Profile Modal -->
+    <div id="profile-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-[250] flex items-center justify-center fade-in px-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                <h3 class="font-bold text-slate-800 text-base flex items-center gap-2"><i class="fas fa-image theme-text"></i> จัดการรูปโปรไฟล์ (ทีม 3)</h3>
+                <button onclick="closeProfileModal()" class="text-slate-400 hover:text-rose-500 transition-colors bg-white hover:bg-rose-50 rounded-full w-8 h-8 flex items-center justify-center border border-slate-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1 space-y-3 bg-white" id="profile-modal-content"></div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex justify-end">
+                <button onclick="saveProfiles()" class="w-full sm:w-auto px-6 py-2.5 theme-bg font-semibold text-xs rounded-xl hover:opacity-90 transition shadow-sm">บันทึกรูปภาพสู่ฐานข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ================= CONFIGURATION (TEAM 3) =================
+        // นำ URL ของ Google Apps Script Web App สำหรับทีม 3 มาวางแทนที่ตรงนี้
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyjNYt7nWlYa-p5Ict-DM8OWXzYVtlL_6KW3k9JD5vXwTGxpNEGwy9eJYX2LEbVuxxMnw/exec';
+
+        const STORAGE_KEY_USERS = 'app_users_team3_v1';
+        const STORAGE_KEY_LOGS = 'work_logs_team3';
+        const STORAGE_KEY_BG = 'customBgColor_team3';
+        const STORAGE_KEY_THEME = 'customThemeColor_team3';
+
+        const ORDERED_USER_KEYS = ['ice', 'feem', 'beer', 'babe'];
+
+        const TASK_CONFIG = [
+            { key: 'mlpr', label: 'MLPR', color: 'text-rose-600', bg: 'bg-rose-50 text-rose-700' },
+            { key: 'mnpr', label: 'MNPR', color: 'text-blue-600', bg: 'bg-blue-50 text-blue-700' },
+            { key: 'reconfirmed', label: 'Re-Con', color: 'text-emerald-600', bg: 'bg-emerald-50 text-emerald-700' },
+            { key: 'log', label: 'LOG', color: 'text-orange-600', bg: 'bg-orange-50 text-orange-700' },
+            { key: 'txn', label: 'TXN', color: 'text-indigo-600', bg: 'bg-indigo-50 text-indigo-700' },
+            { key: 'cctv', label: 'CCTV (AUDIT)', color: 'text-teal-600', bg: 'bg-teal-50 text-teal-700' },
+            { key: 'temp', label: 'น้องถาม', color: 'text-pink-600', bg: 'bg-pink-50 text-pink-700' },
+            { key: 'royal', label: 'รถในขบวนเสด็จ', color: 'text-amber-600', bg: 'bg-amber-50 text-amber-700' }
+        ];
+
+        const defaultUsers = {
+            'ice': { name: 'ไอซ์', shortName: 'ไอซ์', avatar: 'https://placehold.co/150x150/f0fdfa/0d9488?text=ICE' },
+            'feem': { name: 'ฟีม', shortName: 'ฟีม', avatar: 'https://placehold.co/150x150/eef2ff/4f46e5?text=FEEM' },
+            'beer': { name: 'เบียร์', shortName: 'เบียร์', avatar: 'https://placehold.co/150x150/ecfdf5/059669?text=BEER' },
+            'babe': { name: 'เบ๊บ', shortName: 'เบ๊บ', avatar: 'https://placehold.co/150x150/fff1f2/e11d48?text=BABE' }
+        };
+
+        let savedUsers = JSON.parse(localStorage.getItem(STORAGE_KEY_USERS)) || {};
+        let users = { ...defaultUsers, ...savedUsers };
+
+        let currentUser = null;
+        let records = [];
+
+        // ================= CUSTOM COLOR FUNCTIONS =================
+        function hexToRgba(hex, alpha) {
+            const cleanHex = hex.replace('#', '');
+            const r = parseInt(cleanHex.substring(0, 2), 16);
+            const g = parseInt(cleanHex.substring(2, 4), 16);
+            const b = parseInt(cleanHex.substring(4, 6), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function updateCustomBg(color) {
+            document.documentElement.style.setProperty('--bg-main', color);
+            localStorage.setItem(STORAGE_KEY_BG, color);
+            const picker = document.getElementById('bg-color-picker');
+            if (picker) picker.value = color;
+        }
+
+        function updateCustomTheme(color) {
+            document.documentElement.style.setProperty('--theme-color', color);
+            document.documentElement.style.setProperty('--theme-soft', hexToRgba(color, 0.12));
+            document.documentElement.style.setProperty('--theme-border', hexToRgba(color, 0.35));
+            localStorage.setItem(STORAGE_KEY_THEME, color);
+            const picker = document.getElementById('theme-color-picker');
+            if (picker) picker.value = color;
+        }
+
+        function resetCustomColors() {
+            updateCustomBg('#f8fafc');
+            updateCustomTheme('#0d9488');
+            showNotification('รีเซ็ตสีเป็นค่าเริ่มต้นเรียบร้อย', 'success');
+        }
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const savedBg = localStorage.getItem(STORAGE_KEY_BG) || '#f8fafc';
+            const savedTheme = localStorage.getItem(STORAGE_KEY_THEME) || '#0d9488';
+            updateCustomBg(savedBg);
+            updateCustomTheme(savedTheme);
+
+            initDate();
+            renderProfileGrid();
+            localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+            await loadDataFromDatabase();
+        });
+
+        async function loadDataFromDatabase() {
+            try {
+                if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL === 'YOUR_TEAM3_WEB_APP_URL_HERE') {
+                    records = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGS)) || [];
+                    updateKPIs();
+                    return;
+                }
+
+                const response = await fetch(GOOGLE_SCRIPT_URL);
+                const result = await response.json();
+
+                if (result.status === 'success') {
+                    records = (result.data || []).map(r => {
+                        let fixedDate = r.workDate;
+                        if (fixedDate && String(fixedDate).includes('T')) {
+                            const d = new Date(fixedDate);
+                            fixedDate = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                        }
+                        return {
+                            ...r,
+                            workDate: String(fixedDate || '').trim(),
+                            mlpr: Number(r.mlpr) || 0,
+                            mnpr: Number(r.mnpr) || 0,
+                            reconfirmed: Number(r.reconfirmed) || 0,
+                            txn: Number(r.txn) || 0,
+                            log: Number(r.log) || 0,
+                            temp: Number(r.temp) || 0,
+                            qc: Number(r.qc) || 0,
+                            royal: Number(r.royal) || 0,
+                            cctv: Number(r.cctv) || 0
+                        };
+                    });
+
+                    if (result.users && Object.keys(result.users).length > 0) {
+                        users = { ...users, ...result.users };
+                        localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+                        renderProfileGrid();
+
+                        if (currentUser) {
+                            currentUser = { id: currentUser.id, ...users[currentUser.id] };
+                            const navAvatar = document.getElementById('nav-avatar');
+                            if (navAvatar) navAvatar.src = currentUser.avatar;
+                        }
+                    }
+
+                    updateKPIs();
+                    if (!document.getElementById('section-history').classList.contains('hidden')) renderMyHistory();
+                    if (!document.getElementById('section-matrix').classList.contains('hidden')) renderMatrixTable();
+                }
+            } catch (error) {
+                showNotification('ไม่สามารถเชื่อมต่อฐานข้อมูลได้ ใช้ข้อมูลออฟไลน์แทน', 'error');
+                records = JSON.parse(localStorage.getItem(STORAGE_KEY_LOGS)) || [];
+                updateKPIs();
+            }
+        }
+
+        function updateKPIs() {
+            if (!currentUser) return;
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            let myTotal = 0, myDays = 0, teamTotal = 0;
+
+            records.forEach(r => {
+                if (r.workDate && r.workDate.startsWith(currentMonth) && (!r.status || r.status === 'work')) {
+                    const sum = (r.mlpr || 0) + (r.mnpr || 0) + (r.reconfirmed || 0) + (r.log || 0) + (r.txn || 0) + (r.cctv || 0) + (r.temp || 0) + (r.royal || 0);
+                    teamTotal += sum;
+                    if (r.userId === currentUser.id) {
+                        myTotal += sum;
+                        myDays += 1;
+                    }
+                }
+            });
+
+            document.getElementById('kpi-my-total').innerText = myTotal.toLocaleString('en-US');
+            document.getElementById('kpi-my-days').innerText = `${myDays} วัน`;
+            document.getElementById('kpi-team-total').innerText = teamTotal.toLocaleString('en-US');
+        }
+
+        function updateLiveTotal() {
+            const status = document.getElementById('work-status').value;
+            if (status !== 'work') {
+                document.getElementById('live-form-total').innerText = '0';
+                return;
+            }
+            const ml = document.getElementById('check-mlpr').checked ? (Number(document.getElementById('val-mlpr').value) || 0) : 0;
+            const mn = document.getElementById('check-mnpr').checked ? (Number(document.getElementById('val-mnpr').value) || 0) : 0;
+            const re = document.getElementById('check-reconfirmed').checked ? (Number(document.getElementById('val-reconfirmed').value) || 0) : 0;
+            const log = Number(document.getElementById('val-log').value) || 0;
+            const txn = Number(document.getElementById('val-txn').value) || 0;
+            const cctv = Number(document.getElementById('val-cctv').value) || 0;
+            const temp = Number(document.getElementById('val-temp').value) || 0;
+            const royal = Number(document.getElementById('val-royal').value) || 0;
+
+            const total = ml + mn + re + log + txn + cctv + temp + royal;
+            document.getElementById('live-form-total').innerText = total.toLocaleString('en-US');
+        }
+
+        function initDate() {
+            const now = new Date();
+            const today = now.toISOString().split('T')[0];
+            const currentMonth = now.toISOString().slice(0, 7);
+
+            ['work-date', 'summary-date'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = today;
+            });
+            ['history-month', 'team-month'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.value = currentMonth;
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = 'tab-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900 border border-transparent';
+            });
+
+            document.getElementById(`section-${tabId}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`tab-${tabId}`);
+            activeBtn.className = 'tab-btn flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all theme-bg-soft border theme-border shadow-xs';
+
+            if (tabId === 'history') renderMyHistory();
+            if (tabId === 'matrix') renderMatrixTable();
+            if (tabId === 'report') renderSummaryUserList();
+        }
+
+        function showNotification(msg, type = 'success') {
+            const area = document.getElementById('notification-area');
+            const toast = document.createElement('div');
+            const borderClass = type === 'success' ? 'border-emerald-500 bg-white' : 'border-rose-500 bg-white';
+            const iconColor = type === 'success' ? 'text-emerald-500' : 'text-rose-500';
+            const icon = type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+
+            toast.className = `${borderClass} border-l-4 border text-slate-800 px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 fade-in text-xs font-medium`;
+            toast.innerHTML = `<i class="fas ${icon} ${iconColor} text-base"></i> ${msg}`;
+
+            area.appendChild(toast);
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(-8px)';
+                toast.style.transition = 'all 0.25s';
+                setTimeout(() => toast.remove(), 250);
+            }, 3000);
+        }
+
+        function renderProfileGrid() {
+            const grid = document.getElementById('profile-grid');
+            grid.innerHTML = '';
+
+            ORDERED_USER_KEYS.forEach(uid => {
+                if (!users[uid]) return;
+                const u = users[uid];
+                const card = document.createElement('div');
+                card.className = 'group flex flex-col items-center cursor-pointer transition-all duration-200 hover:-translate-y-1.5';
+                card.onclick = () => login(uid);
+
+                card.innerHTML = `
+                    <div class="w-24 h-24 md:w-28 md:h-28 rounded-2xl bg-white overflow-hidden shadow-md border-2 border-slate-200 group-hover:shadow-lg transition-all">
+                        <img src="${u.avatar}" alt="${u.name}" class="w-full h-full object-cover">
+                    </div>
+                    <span class="mt-3.5 text-slate-700 font-semibold text-sm transition-colors">${u.name}</span>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function login(uid) {
+            currentUser = { id: uid, ...users[uid] };
+            document.getElementById('nav-username').innerText = currentUser.name;
+            document.getElementById('nav-avatar').src = currentUser.avatar;
+
+            document.getElementById('profile-page').classList.add('hidden');
+            document.getElementById('dashboard-page').classList.remove('hidden');
+
+            updateKPIs();
+            switchTab('form');
+            showNotification(`เข้าสู่ระบบในชื่อ ${currentUser.shortName}`, 'success');
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('dashboard-page').classList.add('hidden');
+            document.getElementById('profile-page').classList.remove('hidden');
+            resetForm();
+        }
+
+        function toggleWorkInputs() {
+            const status = document.getElementById('work-status').value;
+            const metricsDiv = document.getElementById('work-metrics-section');
+            if (status === 'work') metricsDiv.classList.remove('hidden');
+            else metricsDiv.classList.add('hidden');
+            updateLiveTotal();
+        }
+
+        function toggleInput(key) {
+            const checkbox = document.getElementById(`check-${key}`);
+            const input = document.getElementById(`val-${key}`);
+            if (checkbox.checked) {
+                input.classList.remove('hidden');
+                input.focus();
+            } else {
+                input.classList.add('hidden');
+                input.value = '';
+            }
+            updateLiveTotal();
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            const dateVal = document.getElementById('work-date').value;
+            const statusVal = document.getElementById('work-status').value;
+            const editId = document.getElementById('edit-id').value;
+
+            if (!editId) {
+                const existing = records.find(r => r.userId === currentUser.id && r.workDate === dateVal);
+                if (existing) {
+                    showNotification('วันนี้บันทึกข้อมูลไปแล้ว หากต้องการแก้ไขให้ไปที่แท็บประวัติ', 'error');
+                    return;
+                }
+            }
+
+            const data = {
+                id: editId || Date.now().toString(),
+                timestamp: new Date().toISOString(),
+                workDate: dateVal,
+                userId: currentUser.id,
+                status: statusVal,
+                mlpr: (statusVal === 'work' && document.getElementById('check-mlpr').checked) ? Number(document.getElementById('val-mlpr').value) : 0,
+                mnpr: (statusVal === 'work' && document.getElementById('check-mnpr').checked) ? Number(document.getElementById('val-mnpr').value) : 0,
+                reconfirmed: (statusVal === 'work' && document.getElementById('check-reconfirmed').checked) ? Number(document.getElementById('val-reconfirmed').value) : 0,
+                log: (statusVal === 'work') ? Number(document.getElementById('val-log').value) : 0,
+                txn: (statusVal === 'work') ? Number(document.getElementById('val-txn').value) : 0,
+                cctv: (statusVal === 'work') ? Number(document.getElementById('val-cctv').value) : 0,
+                temp: (statusVal === 'work') ? Number(document.getElementById('val-temp').value) : 0,
+                royal: (statusVal === 'work') ? Number(document.getElementById('val-royal').value) : 0,
+                qc: 0
+            };
+
+            if (editId) {
+                const idx = records.findIndex(r => r.id === editId);
+                if (idx !== -1) records[idx] = data;
+            } else {
+                records.unshift(data);
+            }
+
+            localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(records));
+            updateKPIs();
+
+            showNotification(editId ? 'กำลังอัปเดตข้อมูล...' : 'กำลังบันทึกข้อมูล...', 'success');
+            if (editId) switchTab('history');
+            else resetForm();
+
+            if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'YOUR_TEAM3_WEB_APP_URL_HERE') {
+                try {
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'save', data: data }),
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                    });
+                    showNotification('บันทึกข้อมูลลงฐานข้อมูลสำเร็จ', 'success');
+                } catch (error) {
+                    showNotification('ไม่สามารถเชื่อมต่อฐานข้อมูล แต่บันทึกแบบออฟไลน์แล้ว', 'error');
+                }
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('work-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('work-status').value = 'work';
+            toggleWorkInputs();
+
+            ['mlpr', 'mnpr', 'reconfirmed'].forEach(k => {
+                const input = document.getElementById(`val-${k}`);
+                if (input) { input.classList.add('hidden'); input.value = ''; }
+                const chk = document.getElementById(`check-${k}`);
+                if (chk) chk.checked = false;
+            });
+            document.getElementById('val-cctv').value = '';
+            document.getElementById('btn-submit').innerText = 'บันทึกข้อมูล';
+            initDate();
+            updateLiveTotal();
+        }
+
+        function renderMyHistory() {
+            const tbody = document.getElementById('history-table-body');
+            tbody.innerHTML = '';
+
+            const monthInput = document.getElementById('history-month').value;
+            if (!monthInput) return;
+
+            const [year, month] = monthInput.split('-');
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            let sum = { ml: 0, mn: 0, re: 0, log: 0, txn: 0, cctv: 0, temp: 0, roy: 0, all: 0 };
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const fullDate = `${year}-${month}-${day.toString().padStart(2, '0')}`;
+                const rec = records.find(r => r.userId === currentUser.id && r.workDate === fullDate);
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50 transition-colors';
+
+                let content = '', actionBtn = '';
+
+                if (rec) {
+                    if (!rec.status || rec.status === 'work') {
+                        const dSum = (rec.mlpr || 0) + (rec.mnpr || 0) + (rec.reconfirmed || 0) + (rec.log || 0) + (rec.txn || 0) + (rec.cctv || 0) + (rec.temp || 0) + (rec.royal || 0);
+
+                        sum.ml += (rec.mlpr || 0); sum.mn += (rec.mnpr || 0); sum.re += (rec.reconfirmed || 0);
+                        sum.log += (rec.log || 0); sum.txn += (rec.txn || 0); sum.cctv += (rec.cctv || 0);
+                        sum.temp += (rec.temp || 0); sum.roy += (rec.royal || 0); sum.all += dSum;
+
+                        const f = v => v > 0 ? `<span class="font-medium">${v.toLocaleString('en-US')}</span>` : `<span class="opacity-25">-</span>`;
+                        content = `
+                            <td class="px-2 py-3 text-center text-rose-600 border-b border-slate-100">${f(rec.mlpr)}</td>
+                            <td class="px-2 py-3 text-center text-blue-600 border-b border-slate-100">${f(rec.mnpr)}</td>
+                            <td class="px-2 py-3 text-center text-emerald-600 border-b border-slate-100">${f(rec.reconfirmed)}</td>
+                            <td class="px-2 py-3 text-center text-orange-600 border-b border-slate-100">${f(rec.log)}</td>
+                            <td class="px-2 py-3 text-center text-indigo-600 border-b border-slate-100">${f(rec.txn)}</td>
+                            <td class="px-2 py-3 text-center text-teal-600 border-b border-slate-100">${f(rec.cctv)}</td>
+                            <td class="px-2 py-3 text-center text-pink-600 border-b border-slate-100">${f(rec.temp)}</td>
+                            <td class="px-2 py-3 text-center text-amber-600 border-b border-slate-100">${f(rec.royal)}</td>
+                            <td class="px-3 py-3 text-center font-bold text-slate-900 bg-slate-50 border-b border-slate-100">${dSum > 0 ? dSum.toLocaleString('en-US') : '-'}</td>
+                        `;
+                    } else {
+                        const statuses = {
+                            'vacation': { t: '🏖️ ลาพักร้อน', c: 'text-amber-700 bg-amber-50' },
+                            'sick': { t: '🤒 ลาป่วย', c: 'text-rose-700 bg-rose-50' },
+                            'personal': { t: '📝 ลากิจ', c: 'text-orange-700 bg-orange-50' },
+                            'off': { t: '🏠 วันหยุด', c: 'text-slate-600 bg-slate-100' },
+                            'swap': { t: '🔄 สลับกะ', c: 'text-teal-700 bg-teal-50' }
+                        };
+                        const st = statuses[rec.status] || { t: rec.status, c: 'text-slate-600 bg-slate-100' };
+                        content = `<td colspan="9" class="px-4 py-3 text-center text-xs font-medium border-b border-slate-100"><span class="inline-block px-3 py-1 rounded-full ${st.c}">${st.t}</span></td>`;
+                    }
+                    actionBtn = `
+                        <div class="flex items-center justify-end gap-1">
+                            <button onclick="editRecord('${rec.id}')" class="theme-text hover:opacity-75 text-xs px-2 py-1 rounded-lg transition" title="แก้ไข"><i class="fas fa-edit"></i></button>
+                            <button onclick="deleteRecord('${rec.id}')" class="text-rose-500 hover:text-rose-700 text-xs px-2 py-1 rounded-lg hover:bg-rose-50 transition" title="ลบ"><i class="fas fa-trash"></i></button>
+                        </div>
+                    `;
+                } else {
+                    content = `<td colspan="9" class="px-4 py-3 text-center text-xs text-slate-400 italic cursor-pointer border-b border-slate-100" onclick="loadForAdd('${fullDate}')">คลิกเพื่อเพิ่มข้อมูล</td>`;
+                    actionBtn = `<button onclick="loadForAdd('${fullDate}')" class="text-slate-400 theme-text text-xs px-2 py-1 rounded-lg transition bg-slate-50 border border-slate-200"><i class="fas fa-plus"></i></button>`;
+                }
+
+                tr.innerHTML = `
+                    <td class="px-4 py-3 text-center border-r border-b border-slate-100">
+                        <div class="w-6 h-6 rounded-lg mx-auto flex items-center justify-center text-xs ${rec ? 'theme-bg-soft font-bold' : 'bg-slate-100 text-slate-500'}">${day}</div>
+                    </td>
+                    ${content}
+                    <td class="px-4 py-3 text-right border-l border-b border-slate-100">${actionBtn}</td>
+                `;
+                tbody.appendChild(tr);
+            }
+
+            const sumRow = document.createElement('tr');
+            sumRow.className = 'bg-slate-50 border-b border-slate-200 sticky top-0 z-20 shadow-xs';
+            sumRow.innerHTML = `
+                <td class="px-4 py-3 text-center text-xs theme-text uppercase font-bold border-r border-b border-slate-200">Sum</td>
+                <td class="px-2 py-3 text-center font-semibold text-rose-600 border-b border-slate-200">${sum.ml ? sum.ml.toLocaleString('en-US') : '-'}</td>
+                <td class="px-2 py-3 text-center font-semibold text-blue-600 border-b border-slate-200">${sum.mn ? sum.mn.toLocaleString('en-US') : '-'}</td>
+                <td class="px-2 py-3 text-center font-semibold text-emerald-600 border-b border-slate-200">${sum.re ? sum.re.toLocaleString('en-US') : '-'}</td>
+                <td class="px-2 py-3 text-center font-semibold text-orange-600 border-b border-slate-200">${sum.log ? sum.log.toLocaleString('en-US') : '-'}</td>
+                <td class="px-2 py-3 text-center font-semibold text-indigo-600 border-b border-slate-200">${sum.txn ? sum.txn.toLocaleString('en-US') : '-'}</td>
+                <td class="px-2 py-3 text-center font-semibold text-teal-600 border-b border-slate-200">${sum.cctv ? sum.cctv.toLocaleString('en-US') : '-'}</td>
+                <td class="px-2 py-3 text-center font-semibold text-pink-600 border-b border-slate-200">${sum.temp ? sum.temp.toLocaleString('en-US') : '-'}</td>
+                <td class="px-2 py-3 text-center font-semibold text-amber-600 border-b border-slate-200">${sum.roy ? sum.roy.toLocaleString('en-US') : '-'}</td>
+                <td class="px-3 py-3 text-center font-bold text-slate-900 bg-slate-100 border-b border-slate-200">${sum.all ? sum.all.toLocaleString('en-US') : '-'}</td>
+                <td class="border-l border-b border-slate-200"></td>
+            `;
+            tbody.insertBefore(sumRow, tbody.firstChild);
+        }
+
+        function loadForAdd(dateStr) {
+            switchTab('form');
+            resetForm();
+            document.getElementById('work-date').value = dateStr;
+            showNotification(`เตรียมบันทึกข้อมูลวันที่ ${dateStr}`, 'success');
+        }
+
+        async function deleteRecord(id) {
+            if (!confirm('ยืนยันลบข้อมูลนี้?')) return;
+
+            records = records.filter(r => r.id !== id);
+            localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(records));
+            updateKPIs();
+            renderMyHistory();
+            showNotification('กำลังลบข้อมูล...', 'success');
+
+            if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'YOUR_TEAM3_WEB_APP_URL_HERE') {
+                try {
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'delete', data: { id: id } }),
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                    });
+                    showNotification('ลบข้อมูลในฐานข้อมูลสำเร็จ', 'success');
+                } catch (error) {
+                    showNotification('เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล', 'error');
+                }
+            }
+        }
+
+        function editRecord(id) {
+            const rec = records.find(r => r.id === id);
+            if (!rec) return;
+
+            switchTab('form');
+            document.getElementById('edit-id').value = rec.id;
+            document.getElementById('work-date').value = rec.workDate;
+
+            const statusVal = rec.status || 'work';
+            document.getElementById('work-status').value = statusVal;
+            toggleWorkInputs();
+
+            ['mlpr', 'mnpr', 'reconfirmed'].forEach(k => {
+                const input = document.getElementById(`val-${k}`);
+                const chk = document.getElementById(`check-${k}`);
+                if (input) { input.classList.add('hidden'); input.value = ''; }
+                if (chk) chk.checked = false;
+            });
+
+            if (statusVal === 'work') {
+                if (rec.mlpr > 0) { document.getElementById('check-mlpr').checked = true; document.getElementById('val-mlpr').value = rec.mlpr; document.getElementById('val-mlpr').classList.remove('hidden'); }
+                if (rec.mnpr > 0) { document.getElementById('check-mnpr').checked = true; document.getElementById('val-mnpr').value = rec.mnpr; document.getElementById('val-mnpr').classList.remove('hidden'); }
+                if (rec.reconfirmed > 0) { document.getElementById('check-reconfirmed').checked = true; document.getElementById('val-reconfirmed').value = rec.reconfirmed; document.getElementById('val-reconfirmed').classList.remove('hidden'); }
+
+                document.getElementById('val-log').value = rec.log || '';
+                document.getElementById('val-txn').value = rec.txn || '';
+                document.getElementById('val-cctv').value = rec.cctv || '';
+                document.getElementById('val-temp').value = rec.temp || '';
+                document.getElementById('val-royal').value = rec.royal || '';
+            }
+
+            updateLiveTotal();
+            document.getElementById('btn-submit').innerText = 'อัปเดตข้อมูล';
+            showNotification(`ดึงข้อมูลวันที่ ${rec.workDate} สำหรับการแก้ไขเรียบร้อย`, 'success');
+        }
+
+        // ================= วันหยุดและรอบกะ (ทีม 3: หยุดวันศุกร์ และ วันเสาร์) =================
+        function getShiftAndType(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = dateObj.getMonth();
+            const d = dateObj.getDate();
+            const dayOfWeek = dateObj.getDay();
+
+            if (y === 2026 && m === 3 && d >= 10 && d <= 16) {
+                return { shift: 'Free', isHoliday: false, label: 'Free', weeklyShift: 'Free' };
+            }
+
+            const refDate = new Date(2026, 0, 2);
+            const diffTime = dateObj.getTime() - refDate.getTime();
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+            let weekIndex = Math.floor(diffDays / 7);
+            const shifts = ['B', 'A', 'C'];
+            let shiftIndex = (weekIndex % 3 + 3) % 3;
+            const calculatedShift = shifts[shiftIndex];
+
+            if (y === 2026 && m === 0 && d >= 1 && d <= 5) {
+                return { shift: 'Free', isHoliday: false, label: 'Free', weeklyShift: calculatedShift };
+            }
+            if (dayOfWeek === 5 || dayOfWeek === 6) {
+                return { shift: '-', isHoliday: true, label: '', weeklyShift: calculatedShift };
+            }
+            return { shift: calculatedShift, isHoliday: false, label: calculatedShift, weeklyShift: calculatedShift };
+        }
+
+        function openMatrixInNewTab() {
+            const monthInput = document.getElementById('team-month').value;
+            const matrixContainer = document.getElementById('matrix-container');
+            const staticHTML = matrixContainer.innerHTML.replace(/onclick="[^"]*"/g, 'style="cursor:default;"');
+            const currentBg = getComputedStyle(document.documentElement).getPropertyValue('--bg-main').trim() || '#f8fafc';
+
+            const newWin = window.open('', '_blank');
+            if (!newWin) {
+                alert('กรุณาอนุญาต Pop-ups สำหรับเว็บไซต์นี้เพื่อเปิดแท็บใหม่');
+                return;
+            }
+
+            newWin.document.write(`
+                <!DOCTYPE html>
+                <html lang="th">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>ตารางทีม 3 - ${monthInput}</title>
+                    <script src="https://cdn.tailwindcss.com"><\/script>
+                    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+                    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                    <style>
+                        body { font-family: 'Kanit', sans-serif; background-color: ${currentBg}; padding: 20px; color: #1e293b; }
+                        .sticky-col-1 { position: sticky; left: 0; z-index: 45; background-color: #ffffff; background-clip: padding-box; }
+                        .sticky-col-2 { position: sticky; left: 112px; z-index: 45; background-color: #ffffff; background-clip: padding-box; }
+                        .sticky-col-3 { position: sticky; left: 208px; z-index: 45; background-color: #f8fafc; border-right: 1px solid #e2e8f0 !important; background-clip: padding-box; }
+                        .sticky-header { position: sticky; top: 0; z-index: 40; background-clip: padding-box; }
+                        .sticky-corner { position: sticky; top: 0; left: 0; z-index: 60; background-clip: padding-box; }
+                        .sticky-corner-2 { position: sticky; top: 0; left: 112px; z-index: 60; background-clip: padding-box; }
+                        .sticky-corner-3 { position: sticky; top: 0; left: 208px; z-index: 60; border-right: 1px solid #e2e8f0 !important; background-clip: padding-box; }
+                        table { border-collapse: separate !important; border-spacing: 0 !important; border-top: 1px solid #e2e8f0; border-left: 1px solid #e2e8f0; background-color: #ffffff; }
+                        th, td { border-bottom: 1px solid #e2e8f0 !important; border-right: 1px solid #e2e8f0 !important; background-clip: padding-box !important; }
+                        tr.user-divider > td, td[rowspan] { border-bottom: 2px solid #94a3b8 !important; }
+                    </style>
+                </head>
+                <body>
+                    <div class="mb-4 flex justify-between items-center">
+                        <h1 class="text-xl font-bold text-slate-800"><i class="fas fa-table-cells text-teal-600 mr-2"></i>ตารางการทำงานทีม 3 (${monthInput})</h1>
+                        <button onclick="window.close()" class="px-4 py-2 bg-white hover:bg-rose-50 text-rose-600 rounded-xl font-medium transition border border-slate-200 text-xs shadow-xs"><i class="fas fa-times mr-1"></i> ปิดหน้าต่าง</button>
+                    </div>
+                    <div class="overflow-auto max-h-[calc(100vh-100px)] w-full border border-slate-200 rounded-2xl shadow-sm bg-white">
+                        ${staticHTML}
+                    </div>
+                </body>
+                </html>
+            `);
+            newWin.document.close();
+        }
+
+        function renderMatrixTable() {
+            const monthInput = document.getElementById('team-month').value;
+            if (!monthInput) return;
+
+            const [yearStr, monthStr] = monthInput.split('-');
+            const year = parseInt(yearStr);
+            const month = parseInt(monthStr);
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            const thead = document.getElementById('matrix-header');
+            const tbody = document.getElementById('matrix-body');
+
+            let headerHTML = `
+                <tr class="h-10">
+                    <th class="p-2 sticky-col-1 sticky-corner text-center w-28 text-slate-700 bg-slate-50">เจ้าหน้าที่</th>
+                    <th class="p-2 sticky-col-2 sticky-corner-2 text-center w-24 text-slate-700 bg-slate-50">งาน</th>
+                    <th class="p-2 sticky-col-3 sticky-corner-3 text-center min-w-[54px] theme-text font-bold bg-slate-50">รวม</th>
+            `;
+
+            for (let d = 1; d <= daysInMonth; d++) {
+                const dayDate = new Date(year, month - 1, d);
+                const dayName = dayDate.toLocaleDateString('th-TH', { weekday: 'short' });
+                const { shift, isHoliday, label } = getShiftAndType(dayDate);
+
+                const dayStr = d.toString().padStart(2, '0');
+                const fullDate = `${yearStr}-${monthStr}-${dayStr}`;
+
+                const bgClass = isHoliday ? 'bg-rose-50 text-rose-600' : 'bg-white text-slate-600 hover:bg-slate-50';
+
+                let shiftBadge = '';
+                if (label === 'Free') {
+                    shiftBadge = `<span class="block text-[8px] theme-bg-soft font-bold rounded px-1 mt-0.5">Free</span>`;
+                } else if (!isHoliday) {
+                    let color = 'bg-slate-100 text-slate-700';
+                    if (shift === 'A') color = 'bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold';
+                    if (shift === 'B') color = 'bg-amber-100 text-amber-700 border border-amber-200 font-bold';
+                    if (shift === 'C') color = 'bg-purple-100 text-purple-700 border border-purple-200 font-bold';
+                    shiftBadge = `<span class="block text-[9px] ${color} rounded-full w-5 h-5 flex items-center justify-center mx-auto mt-0.5">${shift}</span>`;
+                } else {
+                    shiftBadge = `<span class="block text-[8px] opacity-30 mt-1">-</span>`;
+                }
+
+                headerHTML += `<th onclick="showDailySummary('${fullDate}')" class="p-1 sticky-header text-center min-w-[46px] text-[10px] ${bgClass} align-top pt-2 cursor-pointer transition-colors" title="คลิกดูสรุปงานวันที่ ${d}">
+                    <span class="${isHoliday ? '' : 'text-slate-400'}">${dayName}</span><br>
+                    <span class="text-sm font-semibold text-slate-800">${d}</span>
+                    ${shiftBadge}
+                </th>`;
+            }
+            headerHTML += `</tr>`;
+            thead.innerHTML = headerHTML;
+
+            let bodyHTML = '';
+            let dailyTotals = new Array(daysInMonth + 1).fill(0);
+
+            ORDERED_USER_KEYS.forEach((uid) => {
+                if (!users[uid]) return;
+                const u = users[uid];
+
+                TASK_CONFIG.forEach((task, taskIndex) => {
+                    const isLastTask = taskIndex === TASK_CONFIG.length - 1;
+                    const rowClass = isLastTask ? 'user-divider' : '';
+
+                    bodyHTML += `<tr class="${rowClass} hover:bg-slate-50/70 transition-colors">`;
+
+                    if (taskIndex === 0) {
+                        let userMonthTotal = 0;
+                        records.forEach(r => {
+                            if (r.userId === uid && r.workDate.startsWith(`${yearStr}-${monthStr}`) && (!r.status || r.status === 'work')) {
+                                userMonthTotal += (r.mlpr || 0) + (r.mnpr || 0) + (r.reconfirmed || 0) + (r.log || 0) + (r.txn || 0) + (r.cctv || 0) + (r.temp || 0) + (r.royal || 0);
+                            }
+                        });
+
+                        bodyHTML += `
+                            <td rowspan="${TASK_CONFIG.length}" class="p-2 sticky-col-1 align-middle text-center bg-white">
+                                <div class="flex flex-col items-center gap-1.5">
+                                    <img src="${u.avatar}" class="w-9 h-9 rounded-xl border border-slate-200 object-cover shadow-xs">
+                                    <span class="font-semibold text-slate-700 text-xs">${u.shortName}</span>
+                                    <span class="text-[9px] theme-bg-soft border theme-border px-1.5 py-0.5 rounded-md font-mono font-bold">รวม: ${userMonthTotal.toLocaleString('en-US')}</span>
+                                </div>
+                            </td>
+                        `;
+                    }
+
+                    bodyHTML += `<td class="p-1.5 sticky-col-2 bg-white text-[10px] font-bold ${task.color}">${task.label}</td>`;
+
+                    let taskTotal = 0;
+                    records.forEach(r => {
+                        if (r.userId === uid && r.workDate.startsWith(`${yearStr}-${monthStr}`) && (!r.status || r.status === 'work')) {
+                            taskTotal += (r[task.key] || 0);
+                        }
+                    });
+                    const totalVal = taskTotal > 0 ? taskTotal.toLocaleString('en-US') : '-';
+                    bodyHTML += `<td class="p-1.5 sticky-col-3 text-center text-xs font-bold text-slate-800 bg-slate-50">${totalVal}</td>`;
+
+                    for (let d = 1; d <= daysInMonth; d++) {
+                        const dayStr = d.toString().padStart(2, '0');
+                        const fullDate = `${yearStr}-${monthStr}-${dayStr}`;
+                        const dateObj = new Date(year, month - 1, d);
+                        const rec = records.find(r => r.userId === uid && r.workDate === fullDate);
+                        const { isHoliday, label } = getShiftAndType(dateObj);
+
+                        if (rec) {
+                            if (rec.status && rec.status !== 'work') {
+                                if (taskIndex === 0) {
+                                    let stLabel = '', stBg = '';
+                                    switch (rec.status) {
+                                        case 'vacation': stLabel = 'ลาพัก<br>ร้อน'; stBg = 'bg-amber-100 text-amber-800 font-bold'; break;
+                                        case 'sick': stLabel = 'ลาป่วย'; stBg = 'bg-rose-100 text-rose-800 font-bold'; break;
+                                        case 'personal': stLabel = 'ลากิจ'; stBg = 'bg-orange-100 text-orange-800 font-bold'; break;
+                                        case 'off': stLabel = 'หยุด'; stBg = 'bg-slate-100 text-slate-500'; break;
+                                        case 'swap': stLabel = 'สลับ<br>กะ'; stBg = 'bg-teal-100 text-teal-800 font-bold'; break;
+                                        default: stLabel = rec.status; stBg = 'bg-slate-100 text-slate-500';
+                                    }
+                                    bodyHTML += `<td rowspan="${TASK_CONFIG.length}" class="p-1 text-center text-[9px] leading-tight align-middle ${stBg}">${stLabel}</td>`;
+                                }
+                            } else {
+                                const val = rec[task.key] || 0;
+                                let cellContent = val > 0 ? val.toLocaleString('en-US') : '-';
+                                let cellClass = val > 0 ? `font-semibold ${task.bg}` : 'text-slate-300';
+                                if (val > 0) dailyTotals[d] += val;
+                                bodyHTML += `<td class="p-1 text-center text-[10px] ${cellClass}">${cellContent}</td>`;
+                            }
+                        } else {
+                            if (label === 'Free') {
+                                if (taskIndex === 0) bodyHTML += `<td rowspan="${TASK_CONFIG.length}" class="p-1 text-center text-[9px] font-medium align-middle theme-bg-soft italic">Free</td>`;
+                            } else if (isHoliday) {
+                                if (taskIndex === 0) bodyHTML += `<td rowspan="${TASK_CONFIG.length}" class="p-1 text-center text-[9px] font-medium align-middle text-rose-400 bg-rose-50/40">หยุด</td>`;
+                            } else {
+                                bodyHTML += `<td class="p-1 text-center text-[10px] text-slate-200">-</td>`;
+                            }
+                        }
+                    }
+                    bodyHTML += `</tr>`;
+                });
+            });
+
+            const grandTotalSum = dailyTotals.reduce((a, b) => a + b, 0);
+            let footerHTML = `
+                <tr class="bg-slate-100 font-semibold sticky bottom-0 z-40">
+                    <td class="p-2 sticky-col-1 bg-slate-100 text-center text-xs theme-text font-bold">Total</td>
+                    <td class="p-2 sticky-col-2 bg-slate-100 text-center text-xs text-slate-500">All Tasks</td>
+                    <td class="p-2 sticky-col-3 text-center bg-slate-200 text-slate-900 font-bold text-xs">${grandTotalSum.toLocaleString('en-US')}</td>
+            `;
+            for (let d = 1; d <= daysInMonth; d++) {
+                const val = dailyTotals[d];
+                footerHTML += `<td class="p-1 text-center text-[10px] ${val > 0 ? 'theme-bg-soft font-bold' : 'text-slate-400'}">${val > 0 ? val.toLocaleString('en-US') : '-'}</td>`;
+            }
+            footerHTML += `</tr>`;
+
+            tbody.innerHTML = bodyHTML + footerHTML;
+        }
+
+        function showDailySummary(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            const thaiDate = `${d}/${m}/${parseInt(y) + 543}`;
+            document.getElementById('modal-date-title').innerHTML = `<i class="fas fa-calendar-day theme-text"></i> สรุปงานวันที่ ${thaiDate}`;
+
+            const contentDiv = document.getElementById('modal-content');
+            contentDiv.innerHTML = '';
+
+            let grandTotal = 0;
+            let hasData = false;
+
+            ORDERED_USER_KEYS.forEach(uid => {
+                const u = users[uid];
+                const rec = records.find(r => r.userId === uid && r.workDate === dateStr);
+
+                if (rec) {
+                    hasData = true;
+                    let userDiv = document.createElement('div');
+                    userDiv.className = 'border border-slate-200 rounded-xl p-3 bg-slate-50/70';
+
+                    if (!rec.status || rec.status === 'work') {
+                        let userTotal = 0;
+                        let taskHTML = '<div class="flex flex-wrap gap-1.5 mt-2.5">';
+
+                        TASK_CONFIG.forEach(task => {
+                            const val = rec[task.key] || 0;
+                            if (val > 0) {
+                                userTotal += val;
+                                taskHTML += `<span class="text-[10px] px-2 py-1 rounded-lg font-medium border border-slate-200 bg-white ${task.color}">${task.label}: ${val.toLocaleString('en-US')}</span>`;
+                            }
+                        });
+                        taskHTML += '</div>';
+                        grandTotal += userTotal;
+
+                        userDiv.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <img src="${u.avatar}" class="w-6 h-6 rounded-lg border border-slate-200">
+                                    <span class="font-bold text-slate-800 text-sm">${u.name}</span>
+                                </div>
+                                <span class="text-xs font-bold theme-bg-soft px-2.5 py-0.5 rounded-full">รวม: ${userTotal.toLocaleString('en-US')}</span>
+                            </div>
+                            ${userTotal > 0 ? taskHTML : '<p class="text-xs text-slate-400 mt-2 italic">ไม่มีข้อมูลเนื้องาน</p>'}
+                        `;
+                    } else {
+                        const statuses = {
+                            'vacation': '🏖️ ลาพักร้อน', 'sick': '🤒 ลาป่วย', 'personal': '📝 ลากิจ',
+                            'off': '🏠 วันหยุด', 'swap': '🔄 สลับกะ'
+                        };
+                        userDiv.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <div class="flex items-center gap-2">
+                                    <img src="${u.avatar}" class="w-6 h-6 rounded-lg border border-slate-200 opacity-70">
+                                    <span class="font-semibold text-slate-600 text-sm">${u.name}</span>
+                                </div>
+                                <span class="text-xs font-medium bg-slate-200 text-slate-700 px-2.5 py-1 rounded-lg">${statuses[rec.status] || rec.status}</span>
+                            </div>
+                        `;
+                    }
+                    contentDiv.appendChild(userDiv);
+                }
+            });
+
+            if (!hasData) {
+                contentDiv.innerHTML = `<div class="text-center py-8 text-slate-400 text-sm"><i class="fas fa-folder-open text-3xl mb-2 text-slate-300"></i><br>ไม่มีการบันทึกข้อมูลในวันนี้</div>`;
+            } else {
+                const totalDiv = document.createElement('div');
+                totalDiv.className = 'mt-4 pt-3 border-t border-slate-200 flex justify-between items-center font-bold text-base text-slate-800 px-1';
+                totalDiv.innerHTML = `<span><i class="fas fa-chart-pie theme-text mr-2"></i>ยอดรวมทั้งทีม</span> <span class="theme-text">${grandTotal.toLocaleString('en-US')} งาน</span>`;
+                contentDiv.appendChild(totalDiv);
+            }
+
+            document.getElementById('daily-summary-modal').classList.remove('hidden');
+        }
+
+        function closeDailySummary() {
+            document.getElementById('daily-summary-modal').classList.add('hidden');
+        }
+
+        function renderSummaryUserList() {
+            const container = document.getElementById('summary-user-list');
+            container.innerHTML = '';
+            const dVal = document.getElementById('summary-date').value;
+
+            if (dVal) {
+                const [y, m, d] = dVal.split('-');
+                const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+                const { weeklyShift } = getShiftAndType(dateObj);
+
+                const shiftSelect = document.getElementById('summary-shift');
+                if (weeklyShift === 'A') shiftSelect.value = 'เช้า (A)';
+                else if (weeklyShift === 'B') shiftSelect.value = 'บ่าย (B)';
+                else if (weeklyShift === 'C') shiftSelect.value = 'ดึก (C)';
+            }
+
+            ORDERED_USER_KEYS.forEach(uid => {
+                if (!users[uid]) return;
+                const u = users[uid];
+                const record = records.find(r => r.userId === uid && r.workDate === dVal);
+                let currentStatus = (record && record.status) ? record.status : 'work';
+                const hasRecord = !!record;
+
+                const row = document.createElement('div');
+                row.id = `sum-row-${uid}`;
+                row.dataset.active = hasRecord ? 'true' : 'false';
+                row.className = 'flex items-center justify-between px-3 py-2.5 rounded-xl border border-slate-200 transition-all';
+
+                if (hasRecord) row.classList.add('bg-slate-50', 'opacity-100');
+                else row.classList.add('bg-slate-100/50', 'opacity-50');
+
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="inc-${uid}" ${hasRecord ? 'checked' : ''} class="w-4 h-4 rounded cursor-pointer" onchange="toggleReportUser('${uid}')">
+                        <div class="flex items-center gap-2">
+                            <img src="${u.avatar}" class="w-6 h-6 rounded-lg border border-slate-200 object-cover">
+                            <span class="text-sm text-slate-800 font-medium">${u.shortName}</span>
+                        </div>
+                    </div>
+                    <select id="sum-status-${uid}" ${hasRecord ? '' : 'disabled'} class="bg-white text-slate-700 text-xs px-2.5 py-1.5 rounded-lg border border-slate-200 outline-none disabled:bg-slate-100 disabled:text-slate-400">
+                        <option value="work" ${currentStatus === 'work' ? 'selected' : ''}>✅ มาทำงาน</option>
+                        <option value="vacation" ${currentStatus === 'vacation' ? 'selected' : ''}>🏖️ ลาพักร้อน</option>
+                        <option value="sick" ${currentStatus === 'sick' ? 'selected' : ''}>🤒 ลาป่วย</option>
+                        <option value="personal" ${currentStatus === 'personal' ? 'selected' : ''}>📝 ลากิจ</option>
+                        <option value="off" ${currentStatus === 'off' ? 'selected' : ''}>🏠 วันหยุด</option>
+                        <option value="swap" ${currentStatus === 'swap' ? 'selected' : ''}>🔄 สลับกะ</option>
+                        <option value="absent">❌ ขาดงาน</option>
+                    </select>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function toggleReportUser(uid) {
+            const row = document.getElementById(`sum-row-${uid}`);
+            const isChecked = document.getElementById(`inc-${uid}`).checked;
+            const select = document.getElementById(`sum-status-${uid}`);
+
+            row.dataset.active = isChecked ? 'true' : 'false';
+            if (isChecked) {
+                row.classList.remove('opacity-50', 'bg-slate-100/50');
+                row.classList.add('opacity-100', 'bg-slate-50');
+            } else {
+                row.classList.remove('opacity-100', 'bg-slate-50');
+                row.classList.add('opacity-50', 'bg-slate-100/50');
+            }
+            select.disabled = !isChecked;
+        }
+
+        function generateSummaryText() {
+            const dVal = document.getElementById('summary-date').value;
+            const shift = document.getElementById('summary-shift').value;
+
+            if (!dVal) { showNotification('กรุณาเลือกวันที่ก่อน', 'error'); return; }
+
+            const [y, m, d] = dVal.split('-');
+            let txt = `สรุปรายงานประจำวันที่ ${d}/${m}/${parseInt(y) + 543}\nกะ : ${shift}\n\n`;
+
+            ORDERED_USER_KEYS.forEach(uid => {
+                if (!users[uid]) return;
+                const row = document.getElementById(`sum-row-${uid}`);
+                if (row.dataset.active === 'false') return;
+
+                const status = document.getElementById(`sum-status-${uid}`).value;
+                const uName = users[uid].shortName;
+
+                if (status === 'work') {
+                    const rs = records.filter(r => r.userId === uid && r.workDate === dVal);
+                    if (rs.length > 0) {
+                        let s = { mlpr: 0, mnpr: 0, re: 0, log: 0, txn: 0, cctv: 0, temp: 0, royal: 0 };
+                        rs.forEach(r => {
+                            if (!r.status || r.status === 'work') {
+                                s.mlpr += (r.mlpr || 0); s.mnpr += (r.mnpr || 0); s.re += (r.reconfirmed || 0);
+                                s.log += (r.log || 0); s.txn += (r.txn || 0); s.cctv += (r.cctv || 0);
+                                s.temp += (r.temp || 0); s.royal += (r.royal || 0);
+                            }
+                        });
+
+                        let tags = [];
+                        if (s.mlpr > 0) tags.push(`MLPR: ${s.mlpr.toLocaleString('en-US')}`);
+                        if (s.mnpr > 0) tags.push(`MNPR: ${s.mnpr.toLocaleString('en-US')}`);
+                        if (s.re > 0) tags.push(`Re-Con: ${s.re.toLocaleString('en-US')}`);
+                        if (s.log > 0) tags.push(`LOG: ${s.log.toLocaleString('en-US')}`);
+                        if (s.txn > 0) tags.push(`TXN: ${s.txn.toLocaleString('en-US')}`);
+                        if (s.cctv > 0) tags.push(`CCTV (AUDIT): ${s.cctv.toLocaleString('en-US')}`);
+                        if (s.temp > 0) tags.push(`น้องถาม: ${s.temp.toLocaleString('en-US')}`);
+                        if (s.royal > 0) tags.push(`รถในขบวนเสด็จ: ${s.royal.toLocaleString('en-US')}`);
+
+                        const details = tags.length ? tags.join(' / ') : 'Standby / ปกติ';
+                        txt += `${uName} : ${details}\n`;
+                    } else {
+                        txt += `${uName} : (รอลงข้อมูล)\n`;
+                    }
+                } else {
+                    const statuses = {
+                        'vacation': 'ลาพักร้อน', 'sick': 'ลาป่วย', 'personal': 'ลากิจ',
+                        'off': 'หยุด', 'swap': 'สลับกะ', 'absent': 'ขาดงาน'
+                    };
+                    txt += `${uName} : ${statuses[status] || '-'}\n`;
+                }
+            });
+
+            document.getElementById('summary-text').value = txt;
+        }
+
+        function copySummary() {
+            const el = document.getElementById('summary-text');
+            if (!el.value) return;
+            el.select();
+            el.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(el.value)
+                .then(() => showNotification('คัดลอกข้อความสำเร็จ', 'success'))
+                .catch(() => showNotification('ไม่สามารถคัดลอกได้ กรุณาคัดลอกด้วยตนเอง', 'error'));
+        }
+
+        function openProfileModal() {
+            const container = document.getElementById('profile-modal-content');
+            container.innerHTML = `
+                <div class="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 p-2.5 rounded-xl mb-3 font-medium">
+                    <i class="fas fa-info-circle mr-1"></i> แนะนำฝากรูปที่ <b>postimages.org</b> แล้วคัดลอก <b>Direct Link</b> (.jpg หรือ .png) มาวางด้านล่าง
+                </div>
+            `;
+
+            ORDERED_USER_KEYS.forEach(uid => {
+                if (!users[uid]) return;
+                const u = users[uid];
+                container.innerHTML += `
+                    <div class="flex items-center gap-3.5 bg-slate-50 p-3 border border-slate-200 rounded-xl">
+                        <img src="${u.avatar}" class="w-11 h-11 rounded-xl object-cover border border-white shadow-xs bg-slate-200">
+                        <div class="flex-1">
+                            <label class="block text-xs font-bold text-slate-700 mb-1">${u.name}</label>
+                            <input type="text" id="avatar-input-${uid}" value="${u.avatar}" placeholder="วางลิงก์รูปภาพ..." class="w-full text-xs px-3 py-2 border border-slate-200 rounded-lg outline-none bg-white text-slate-800">
+                        </div>
+                    </div>
+                `;
+            });
+            document.getElementById('profile-modal').classList.remove('hidden');
+        }
+
+        function closeProfileModal() {
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+
+        async function saveProfiles() {
+            ORDERED_USER_KEYS.forEach(uid => {
+                if (!users[uid]) return;
+                const val = document.getElementById(`avatar-input-${uid}`).value.trim();
+                if (val) users[uid].avatar = val;
+            });
+
+            localStorage.setItem(STORAGE_KEY_USERS, JSON.stringify(users));
+            renderProfileGrid();
+            closeProfileModal();
+            showNotification('กำลังบันทึกรูปลงฐานข้อมูลออนไลน์...', 'success');
+
+            if (GOOGLE_SCRIPT_URL && GOOGLE_SCRIPT_URL !== 'YOUR_TEAM3_WEB_APP_URL_HERE') {
+                try {
+                    await fetch(GOOGLE_SCRIPT_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ action: 'saveUsers', data: users }),
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' }
+                    });
+
+                    if (currentUser) {
+                        currentUser = { id: currentUser.id, ...users[currentUser.id] };
+                        document.getElementById('nav-avatar').src = currentUser.avatar;
+                    }
+                    showNotification('บันทึกรูปลงฐานข้อมูลสำเร็จ', 'success');
+                } catch (error) {
+                    showNotification('บันทึกฐานข้อมูลล้มเหลว (บันทึกเฉพาะในเครื่องนี้)', 'error');
+                }
+            }
+        }
+
+        async function refreshData() {
+            const btn = document.getElementById('btn-refresh');
+            const icon = document.getElementById('refresh-icon');
+
+            if (btn) { btn.disabled = true; btn.classList.add('opacity-50'); }
+            if (icon) icon.classList.add('fa-spin');
+            showNotification('กำลังดึงข้อมูลล่าสุดจากเซิร์ฟเวอร์...', 'success');
+
+            await loadDataFromDatabase();
+
+            if (!document.getElementById('section-report').classList.contains('hidden')) {
+                renderSummaryUserList();
+            }
+
+            if (btn) { btn.disabled = false; btn.classList.remove('opacity-50'); }
+            if (icon) icon.classList.remove('fa-spin');
+            showNotification('อัปเดตข้อมูลล่าสุดเรียบร้อยแล้ว', 'success');
+        }
+    </script>
+</body>
+</html>
